@@ -293,8 +293,7 @@ public class GremlinScript extends BaseStep implements StepInterface {
 				bFirstRun = false;
 				// Check if we had a Transformation Status
 				Object tran_stat = data.scope.get("trans_Status");
-				if (tran_stat != null) {// TODO AKRETION not sure: !=
-										// ScriptableObject.NOT_FOUND
+				if (tran_stat != null) {
 					bWithTransStat = true;
 					if (log.isDetailed())
 						logDetailed(("tran_Status found. Checking transformation status while script execution."));  

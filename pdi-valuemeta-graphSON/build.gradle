@@ -24,6 +24,13 @@ configurations {
   }
 }
 
+
+configurations {
+  runtimeWithoutCompile {
+    transitive = false
+  }
+}
+
 dependencies {
   compile('pentaho-kettle:kettle-core:5.0.0+')
   compile('pentaho-kettle:kettle-engine:5.0.0+')
@@ -40,17 +47,11 @@ dependencies {
   
 }
 
+
 task plugin(dependsOn:jar, type: Zip) {
-  into('gremlin-script-plugin/') {
+  into('ValueMetaGraph/') {
     from jar.outputs.files
-  }
-  def compileDeps = configurations.compile.resolve()
-  def runtimeDeps = configurations.runtime.resolve()
-  def leftovers = (compileDeps + runtimeDeps) - compileDeps.intersect(runtimeDeps)
-  into('gremlin-script-plugin/lib') {
-    from leftovers
-    from configurations.runtimeWithoutCompile
-  }
+  }  
 }
 
 task createGradleWrapper(type: Wrapper) {
