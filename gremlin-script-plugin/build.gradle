@@ -1,0 +1,74 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+sourceCompatibility = JavaVersion.VERSION_1_6
+
+project.repositories {
+  ivy {
+    url "http://repo.pentaho.org/artifactory/repo/"
+    layout  "pattern", {
+      ivy "[organisation]/[module]/[revision]/[module]-[revision].ivy.xml"
+      artifact "[organisation]/[module]/[revision]/[module]-[revision].jar"
+      m2compatible = true
+    }
+  }
+  maven {
+    url 'http://repo.pentaho.org/artifactory/repo'
+  }
+  mavenCentral()
+}
+
+configurations {
+  runtimeWithoutCompile {
+    transitive = false
+  }
+}
+
+dependencies {
+  compile('pentaho-kettle:kettle-core:5.0.0+')
+  compile('pentaho-kettle:kettle-engine:5.0.0+')
+  compile('pentaho-kettle:kettle-ui-swt:5.0.0+')
+  compile('pentaho-kettle:kettle-core:5.0.0+')
+  compile('pentaho:metastore:5.0.0+')
+  compile('com.tinkerpop.blueprints:blueprints-core:2.3.0')
+  
+  runtime('com.tinkerpop.gremlin:gremlin-groovy:2.3.0')
+  runtimeWithoutCompile('com.tinkerpop.blueprints:blueprints-core:2.3.0')
+  runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-core:2.1.2')
+  runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-annotations:2.1.1')
+  runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-databind:2.1.2')
+  
+}
+
+/*configurations.all {
+  resolutionStrategy {
+    eachDependency { DependencyResolveDetails details ->
+      //specifying a fixed version for all libraries with 'org.gradle' group
+      if (details.requested.group == 'org.gradle') {
+          details.useVersion'1.4'
+      }
+      //changing 'groovy-all' into 'groovy':
+      if (details.requested.name == 'groovy-all') {
+         details.useTarget group: details.requested.group, name: 'groovy', version: details.requested.version
+      }
+    }
+  }
+}*/
+
+
+task plugin(dependsOn:jar, type: Zip) {
+  into('gremlin-script-plugin/') {
+    from jar.outputs.files
+  }
+  def compileDeps = configurations.compile.resolve()
+  def runtimeDeps = configurations.runtime.resolve()
+  def leftovers = (compileDeps + runtimeDeps) - compileDeps.intersect(runtimeDeps)
+  into('gremlin-script-plugin/lib') {
+    from leftovers
+    from configurations.runtimeWithoutCompile
+  }
+}
+
+task createGradleWrapper(type: Wrapper) {
+  gradleVersion = '1.6'
+}
