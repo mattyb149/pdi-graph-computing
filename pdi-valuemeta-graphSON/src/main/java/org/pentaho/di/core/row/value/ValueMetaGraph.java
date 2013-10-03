@@ -1,14 +1,12 @@
 package org.pentaho.di.core.row.value;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
@@ -17,24 +15,25 @@ import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.tg.TinkerGraphFactory;
 import com.tinkerpop.blueprints.util.io.graphson.GraphSONReader;
+import com.tinkerpop.blueprints.util.io.graphson.GraphSONWriter;
 
 
-@ValueMetaPlugin(id="4766", name="GraphSON", description="A GraphSON representation of a graph")
-public class ValueMetaGraphSON extends ValueMetaBase {
+@ValueMetaPlugin(id="47274", name="Graph", description="A GraphSON representation of a graph")
+public class ValueMetaGraph extends ValueMetaBase {
   
-  public static final int TYPE_GSON = 4766;  // Value is "GSON" on a phone keypad
+  public static final int TYPE_GRAPH = 47274;  // Value is "GRAPH" on a phone keypad
   
-  public ValueMetaGraphSON() {
+  public ValueMetaGraph() {
     this(null);
   }
   
-  public ValueMetaGraphSON(String name) {
-    super(name, TYPE_GSON);
+  public ValueMetaGraph(String name) {
+    super(name, TYPE_GRAPH);
   }
   
   @Override
   public String getString(Object object) throws KettleValueException {
-    return getGraphSON(object).toString();
+    return convertGraphToString(getGraph(object));
   }
 
   @Override
@@ -76,35 +75,36 @@ public class ValueMetaGraphSON extends ValueMetaBase {
   @Override
   public Object convertData(ValueMetaInterface meta2, Object data2) throws KettleValueException {
     switch(meta2.getType()) {
-    case TYPE_STRING: return convertStringToGraphSON(meta2.getString(data2)); 
-    case TYPE_GSON: return data2;
+    case TYPE_STRING: return convertStringToGraph(meta2.getString(data2)); 
+    case TYPE_GRAPH: return data2;
     default: 
-      throw new KettleValueException(meta2.toStringMeta()+" : can't be converted to a GraphSON");
+      throw new KettleValueException(meta2.toStringMeta()+" : can't be converted to a Graph");
     }
   }
   
   @Override
   public Object getNativeDataType(Object object) throws KettleValueException {
-    return getGraphSON(object);
+    return getGraph(object);
   }
   
-  @SuppressWarnings("unchecked")
-  public Graph getGraphSON(Object object) throws KettleValueException {
+  public Graph getGraph(Object object) throws KettleValueException {
     try {
       if (object == null) {
         return null;
       }
       switch (type) {
+      case TYPE_GRAPH:
+        return (Graph)object;
       case TYPE_NUMBER:
         throw new KettleValueException(toString() + " : I don't know how to convert a number to a graph.");
       case TYPE_STRING:
         switch (storageType) {
         case STORAGE_TYPE_NORMAL:
-          return convertStringToGraphSON((String) object);
+          return convertStringToGraph((String) object);
         case STORAGE_TYPE_BINARY_STRING:
-          return convertStringToGraphSON((String) convertBinaryStringToNativeType((byte[]) object));
+          return convertStringToGraph((String) convertBinaryStringToNativeType((byte[]) object));
         case STORAGE_TYPE_INDEXED:
-          return convertStringToGraphSON((String) index[((Integer) object).intValue()]);
+          return convertStringToGraph((String) index[((Integer) object).intValue()]);
         default:
           throw new KettleValueException(toString() + " : Unknown storage type " + storageType + " specified.");
         }
@@ -129,8 +129,8 @@ public class ValueMetaGraphSON extends ValueMetaBase {
     }
   }
 
-  protected Graph convertStringToGraphSON(String graphSON) throws KettleValueException {
-    if(graphSON == null) {
+  protected Graph convertStringToGraph(String graphString) throws KettleValueException {
+    if(graphString == null) {
       return null;
     }
     Graph baseGraph = null;
@@ -140,15 +140,16 @@ public class ValueMetaGraphSON extends ValueMetaBase {
       //  Before Blueprints 2.4 (which has an ASM conflict with PDI), the only vendor-neutral
       //  Graph implementation is the TinkerGraph, which has a toy problem built-in. We need to 
       //  represent just the JSON, so create the toy problem and clear out the object.
-      // TODO: There's gotta be a better way, but it's almost midnight the day before I demo this :P
-      baseGraph = TinkerGraphFactory.createTinkerGraph();
+      // TODO: There's gotta be a better way
+      baseGraph = (Graph)TinkerGraphFactory.createTinkerGraph();
       for(Edge e : baseGraph.getEdges()) {
         baseGraph.removeEdge(e);
       }
       for(Vertex v : baseGraph.getVertices()) {
         baseGraph.removeVertex(v);
       }
-      GraphSONReader.inputGraph(baseGraph, new ByteArrayInputStream(graphSON.getBytes(this.getStringEncoding())));
+      
+      GraphSONReader.inputGraph(baseGraph, new ByteArrayInputStream(graphString.getBytes()));
       return baseGraph;
     }
     catch(UnsupportedEncodingException uee) {
@@ -157,5 +158,16 @@ public class ValueMetaGraphSON extends ValueMetaBase {
     catch(IOException ioe) {
       throw new KettleValueException(ioe);
     }
+  }
+  
+  protected String convertGraphToString(Graph graph) throws KettleValueException {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      GraphSONWriter.outputGraph(graph, baos);
+      return baos.toString();
+    }
+    catch(Exception e) {
+      throw new KettleValueException(e);
+    }    
   }
 }

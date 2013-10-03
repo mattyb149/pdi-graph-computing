@@ -22,6 +22,7 @@
 
 package org.pentaho.di.trans.steps.gremlinscript;
 
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -49,10 +50,8 @@ import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
-import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Graph;
-import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraphFactory;
+import com.tinkerpop.blueprints.util.io.graphson.GraphSONReader;
 
 /**
  * Executes a Gremlin script on the values in the input stream. Selected calculated
@@ -277,6 +276,16 @@ public class GremlinScript extends BaseStep implements StepInterface {
 					Object valueData = row[data.fields_used[i]];
 
 					Object normalStorageValueData = valueMeta.convertToNormalStorageType(valueData);
+					
+					// HACK: Because of plugin classloader issues, in order to load a Graph object, it has to be converted
+					//  to a GraphSON string by the ValueMetaGraph plugin, then loaded into our own Graph object using a GraphSONReader
+					// TODO: Fix somehow
+					if(valueMeta.getName().equalsIgnoreCase("graph")) {
+					  Graph graph = GremlinScriptUtils.createEmptyGraph();
+					  ByteArrayInputStream bais = new ByteArrayInputStream(valueMeta.getString(normalStorageValueData).getBytes());
+					  GraphSONReader.inputGraph(graph, bais);
+					  normalStorageValueData = graph;
+					}
 					data.scope.put(valueMeta.getName(), normalStorageValueData);
 				}
 
@@ -637,14 +646,7 @@ public class GremlinScript extends BaseStep implements StepInterface {
 				}
 			}
 			
-			// Create empty graph
-			baseGraph = TinkerGraphFactory.createTinkerGraph();
-			for(Edge e : baseGraph.getEdges()) {
-			  baseGraph.removeEdge(e);
-			}
-			for(Vertex v : baseGraph.getVertices()) {
-        baseGraph.removeVertex(v);
-      }
+			baseGraph = GremlinScriptUtils.createEmptyGraph();
 			return true;
 		}
 		return false;

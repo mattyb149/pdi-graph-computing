@@ -2,6 +2,9 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 
 sourceCompatibility = JavaVersion.VERSION_1_6
+project.ext.kettle_dependency_revision = 'TRUNK-SNAPSHOT'
+project.ext.metastore_dependency_revision = 'TRUNK-SNAPSHOT'
+project.ext.blueprints_dependency_revision = '2.3.0'
 
 project.repositories {
   ivy {
@@ -24,34 +27,33 @@ configurations {
   }
 }
 
-
-configurations {
-  runtimeWithoutCompile {
-    transitive = false
-  }
-}
-
 dependencies {
-  compile('pentaho-kettle:kettle-core:5.0.0+')
-  compile('pentaho-kettle:kettle-engine:5.0.0+')
-  compile('pentaho-kettle:kettle-ui-swt:5.0.0+')
-  compile('pentaho-kettle:kettle-core:5.0.0+')
-  compile('pentaho:metastore:5.0.0+')
-  compile('com.tinkerpop.blueprints:blueprints-core:2.3.0')
+  compile("pentaho-kettle:kettle-core:${project.ext.kettle_dependency_revision}")
+  compile("pentaho-kettle:kettle-engine:${project.ext.kettle_dependency_revision}")
+  compile("pentaho-kettle:kettle-ui-swt:${project.ext.kettle_dependency_revision}")
+  compile("pentaho:metastore:${project.ext.metastore_dependency_revision}")
+  compile("com.tinkerpop.blueprints:blueprints-core:${project.ext.blueprints_dependency_revision}")
   
-  runtime('com.tinkerpop.gremlin:gremlin-groovy:2.3.0')
-  runtimeWithoutCompile('com.tinkerpop.blueprints:blueprints-core:2.3.0')
+  runtime("com.tinkerpop.gremlin:gremlin-groovy:${project.ext.blueprints_dependency_revision}")
+  runtimeWithoutCompile("com.tinkerpop.blueprints:blueprints-core:${project.ext.blueprints_dependency_revision}")
   runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-core:2.1.2')
   runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-annotations:2.1.1')
   runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-databind:2.1.2')
-  
+  runtimeWithoutCompile('org.codehaus.jettison:jettison:1.2')  
 }
 
 
 task plugin(dependsOn:jar, type: Zip) {
   into('ValueMetaGraph/') {
     from jar.outputs.files
-  }  
+  }
+  def compileDeps = configurations.compile.resolve()
+  def runtimeDeps = configurations.runtime.resolve()
+  def leftovers = (compileDeps + runtimeDeps) - compileDeps.intersect(runtimeDeps)
+  into('ValueMetaGraph/lib') {
+    from leftovers
+    from configurations.runtimeWithoutCompile
+  }
 }
 
 task createGradleWrapper(type: Wrapper) {

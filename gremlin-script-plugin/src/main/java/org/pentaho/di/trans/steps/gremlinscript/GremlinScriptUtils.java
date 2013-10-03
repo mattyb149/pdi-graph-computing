@@ -7,19 +7,24 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Graph;
+import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.tg.TinkerGraphFactory;
+
 public class GremlinScriptUtils {
   
   private static ScriptEngineManager scriptEngineManager;
   
   /**
-   * Instantiates the right scripting language interpreter, falling back to Javascript for backward compatibility
+   * Instantiates the right scripting language interpreter, falling back to Gremlin-Groovy for backward compatibility
    * @param engineName
    * @return the desired ScriptEngine, or null if none can be found
    */
   public static ScriptEngine createNewScriptEngine(String engineName) {
     
     ScriptEngine scriptEngine = getScriptEngineManager().getEngineByName(engineName);
-    if (scriptEngine == null) {//falls back to Javascript
+    if (scriptEngine == null) {//falls back to Gremlin-Groovy
       scriptEngine = getScriptEngineManager().getEngineByName("gremlin-groovy");
     }
     return scriptEngine;
@@ -45,5 +50,17 @@ public class GremlinScriptUtils {
       }
     }   
     return scriptEngineNames;
+  }
+  
+  public static Graph createEmptyGraph() {
+    // Create empty graph
+    Graph emptyGraph = TinkerGraphFactory.createTinkerGraph();
+    for(Edge e : emptyGraph.getEdges()) {
+      emptyGraph.removeEdge(e);
+    }
+    for(Vertex v : emptyGraph.getVertices()) {
+      emptyGraph.removeVertex(v);
+    }
+    return emptyGraph;
   }
 }
