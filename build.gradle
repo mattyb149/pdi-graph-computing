@@ -1,0 +1,16 @@
+apply plugin:'java'
+
+configurations {
+  zip
+}
+
+afterEvaluate {
+  subprojects.findAll{it.name != 'pdi-valuemeta-map'}.each { sp ->
+    dependencies.add('zip', dependencies.project('path': sp.path, 'configuration': 'zip'))
+  }
+}
+
+task dist(type: Copy) {
+  from(configurations.findByName('zip'))
+  into(distsDir)  
+}

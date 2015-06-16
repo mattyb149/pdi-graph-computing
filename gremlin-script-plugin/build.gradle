@@ -2,9 +2,9 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 
 sourceCompatibility = JavaVersion.VERSION_1_6
-project.ext.kettle_dependency_revision = 'TRUNK-SNAPSHOT'
-project.ext.metastore_dependency_revision = 'TRUNK-SNAPSHOT'
-project.ext.blueprints_dependency_revision = '2.3.0'
+ext.kettle_dependency_revision = '5.4+'
+ext.metastore_dependency_revision = '5.4+'
+ext.blueprints_dependency_revision = '2.6.0'
 
 project.repositories {
   ivy {
@@ -25,6 +25,7 @@ configurations {
   runtimeWithoutCompile {
     transitive = false
   }
+  zip
 }
 
 dependencies {
@@ -43,16 +44,20 @@ dependencies {
 }
 
 task plugin(dependsOn:jar, type: Zip) {
-  into('gremlin-script-plugin/') {
+  into("${project.name}/") {
     from jar.outputs.files
   }
   def compileDeps = configurations.compile.resolve()
   def runtimeDeps = configurations.runtime.resolve()
   def leftovers = (compileDeps + runtimeDeps) - compileDeps.intersect(runtimeDeps)
-  into('gremlin-script-plugin/lib') {
+  into("${project.name}/lib") {
     from leftovers
     from configurations.runtimeWithoutCompile
   }
+}
+
+artifacts {
+  zip plugin
 }
 
 task createGradleWrapper(type: Wrapper) {
