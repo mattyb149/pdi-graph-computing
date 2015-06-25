@@ -2,9 +2,9 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 
 sourceCompatibility = JavaVersion.VERSION_1_6
-project.ext.kettle_dependency_revision = 'TRUNK-SNAPSHOT'
-project.ext.metastore_dependency_revision = 'TRUNK-SNAPSHOT'
-project.ext.blueprints_dependency_revision = '2.3.0'
+ext.kettle_dependency_revision = '5.4+'
+ext.metastore_dependency_revision = '5.4+'
+ext.blueprints_dependency_revision = '2.6.0'
 
 project.repositories {
   ivy {
@@ -25,35 +25,48 @@ configurations {
   runtimeWithoutCompile {
     transitive = false
   }
+  zip
 }
 
+
+
 dependencies {
+  compile project(':pdi-valuemeta-map')
   compile("pentaho-kettle:kettle-core:${project.ext.kettle_dependency_revision}")
   compile("pentaho-kettle:kettle-engine:${project.ext.kettle_dependency_revision}")
   compile("pentaho-kettle:kettle-ui-swt:${project.ext.kettle_dependency_revision}")
   compile("pentaho:metastore:${project.ext.metastore_dependency_revision}")
   compile("com.tinkerpop.blueprints:blueprints-core:${project.ext.blueprints_dependency_revision}")
-  
+    
   runtime("com.tinkerpop.gremlin:gremlin-groovy:${project.ext.blueprints_dependency_revision}")
   runtimeWithoutCompile("com.tinkerpop.blueprints:blueprints-core:${project.ext.blueprints_dependency_revision}")
   runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-core:2.1.2')
   runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-annotations:2.1.1')
   runtimeWithoutCompile('com.fasterxml.jackson.core:jackson-databind:2.1.2')
-  runtimeWithoutCompile('org.codehaus.jettison:jettison:1.2')  
+  runtimeWithoutCompile('org.codehaus.jettison:jettison:1.2')
+  subprojects.each {
+    compile it
+  }
+
+  testCompile 'junit:junit:4.10'
 }
 
 
 task plugin(dependsOn:jar, type: Zip) {
-  into('ValueMetaGraph/') {
+  into("${project.name}/") {
     from jar.outputs.files
   }
   def compileDeps = configurations.compile.resolve()
   def runtimeDeps = configurations.runtime.resolve()
   def leftovers = (compileDeps + runtimeDeps) - compileDeps.intersect(runtimeDeps)
-  into('ValueMetaGraph/lib') {
+  into("${project.name}/lib") {
     from leftovers
     from configurations.runtimeWithoutCompile
   }
+}
+
+artifacts {
+  zip plugin
 }
 
 task createGradleWrapper(type: Wrapper) {
